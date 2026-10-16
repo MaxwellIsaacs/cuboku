@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Cubedoku</title>
+  <meta name="description" content="Sudoku on a 3D cube. Every face is a hidden turn, mirror or code of the others: work it out, copy, paste.">
+  <meta name="theme-color" content="#f8f5f0">
+  <meta property="og:title" content="Cubedoku">
+  <meta property="og:description" content="Sudoku on a 3D cube. Every face is a hidden turn, mirror or code of the others.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 29 9v14L16 30 3 23V9z' fill='%234066f0'/%3E%3Cpath d='M16 16 29 9M16 16v14M16 16 3 9' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f8f5f0; }
+    canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; outline: none; touch-action: none; }
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      font: 700 15px system-ui, sans-serif; color: #807e8a; letter-spacing: .08em; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="glcanvas" tabindex="1"></canvas>
+  <div id="loading">LOADING CUBEDOKU…</div>
+  <noscript>Cubedoku needs JavaScript and WebGL.</noscript>
+  <script src="gl.js"></script>
+  <script>
+    // Progress lives in localStorage; the wasm reads and writes it through these two imports.
+    const KEY = "cubedoku.progress";
+    miniquad_add_plugin({
+      name: "cubedoku",
+      version: 1,
+      register_plugin(importObject) {
+        importObject.env.cubedoku_store_get = (ptr, cap) => {
+          let s = null;
+          try { s = localStorage.getItem(KEY); } catch (e) {}
+          if (s === null) return -1;
+          const bytes = new TextEncoder().encode(s);
+          if (bytes.length > cap) return -1;
+          new Uint8Array(wasm_memory.buffer, ptr, bytes.length).set(bytes);
+          return bytes.length;
+        };
+        importObject.env.cubedoku_store_set = (ptr, len) => {
+          const s = new TextDecoder().decode(new Uint8Array(wasm_memory.buffer, ptr, len));
+          try { localStorage.setItem(KEY, s); } catch (e) {}
+        };
+      },
+      on_init() { document.getElementById("loading").remove(); },
+    });
+    load("cubedoku.wasm");
+    document.getElementById("glcanvas").focus();
+  </script>
+</body>
+</html>
